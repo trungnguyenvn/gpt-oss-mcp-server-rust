@@ -115,12 +115,15 @@ After deployment, you'll receive an MCP endpoint URL. Add it to your MCP client 
 
 ```json
 {
-  "servers": {
-    "gpt-oss-browser": {
-      "command": "mcp-client",
-      "args": ["--url", "https://your-api-gateway-url/prod/mcp"]
-    }
-  }
+	"mcpServers": {
+		"gpt-oss-browser": {
+			"command": "npx",
+			"args": [
+				"mcp-remote",
+        "https://your-api-gateway-url/prod/mcp"
+			]
+		}
+	}
 }
 ```
 
