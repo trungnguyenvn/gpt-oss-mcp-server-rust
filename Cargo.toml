@@ -9,13 +9,13 @@ path = "src/main.rs"
 
 [dependencies]
 # Lambda runtime
-lambda_runtime = "0.8"
-lambda_http = "0.8"
+lambda_runtime = "0.14"
+lambda_http = "0.16"
 
 # HTTP handling
-axum = "0.7"
-tower = "0.4"
-tower-http = { version = "0.5", features = ["cors"] }
+axum = "0.8"
+tower = { version = "0.4", features = ["util"] }
+tower-http = { version = "0.6", features = ["cors"] }
 
 # Async runtime
 tokio = { version = "1.0", features = ["macros"] }
@@ -25,11 +25,11 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 
 # HTTP client with rustls instead of native-tls for better cross-compilation
-reqwest = { version = "0.11", features = ["json", "rustls-tls"], default-features = false }
+reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
 
 # HTML parsing and text extraction
-html2text = "0.12"
-scraper = "0.20"
+html2text = "0.15"
+scraper = "0.23"
 
 # Logging
 tracing = "0.1"

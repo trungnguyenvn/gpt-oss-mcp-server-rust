@@ -678,7 +678,8 @@ impl McpServer {
             .map_err(|e| format!("Error reading page response: {}", e))?;
 
         // Convert HTML to readable text
-        let text_content = from_read(html.as_bytes(), 80);
+        let text_content = from_read(html.as_bytes(), 80)
+            .map_err(|e| format!("Error converting HTML to text: {}", e))?;
         
         Ok(text_content)
     }
