@@ -1,0 +1,182 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  GPT-OSS Browser MCP Server
+  
+  ARM64-optimized serverless MCP implementation for GPT-OSS browser tools
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 512
+    Runtime: provided.al2023
+    Architectures:
+      - arm64
+    Environment:
+      Variables:
+        RUST_LOG: info
+
+Parameters:
+  Environment:
+    Type: String
+    Default: prod
+    AllowedValues:
+      - dev
+      - staging
+      - prod
+    Description: Environment name
+
+Resources:
+  GptOssMcpFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "gpt-oss-mcp-${Environment}"
+      Description: GPT-OSS Browser MCP Server (ARM64)
+      CodeUri: target/lambda/bootstrap/
+      Handler: rust.handler
+      MemorySize: 1024
+      Timeout: 30
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+          RUST_LOG: info
+          LAMBDA_ARCH: arm64
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
+            RestApiId: !Ref GptOssMcpApi
+        RootApi:
+          Type: Api
+          Properties:
+            Path: /
+            Method: ANY
+            RestApiId: !Ref GptOssMcpApi
+      Tags:
+        Environment: !Ref Environment
+        Project: gpt-oss-mcp
+        Architecture: arm64
+
+  GptOssMcpApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Sub "gpt-oss-mcp-api-${Environment}"
+      StageName: !Ref Environment
+      Cors:
+        AllowMethods: "'GET,POST,OPTIONS,PUT,DELETE'"
+        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,Mcp-Session-Id'"
+        AllowOrigin: "'*'"
+        AllowCredentials: false
+        MaxAge: "'3600'"
+      Tags:
+        Environment: !Ref Environment
+        Project: gpt-oss-mcp
+        Architecture: arm64
+
+  # CloudWatch Log Groups
+  GptOssMcpLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/gpt-oss-mcp-${Environment}"
+      RetentionInDays: 14
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: gpt-oss-mcp
+
+  # IAM Role for Lambda function
+  GptOssMcpRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "gpt-oss-mcp-role-${Environment}"
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: CloudWatchLogs
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource:
+                  - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/gpt-oss-mcp-${Environment}:*"
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: gpt-oss-mcp
+
+  # CloudWatch Alarms for monitoring
+  FunctionErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "gpt-oss-mcp-errors-${Environment}"
+      AlarmDescription: "GPT-OSS MCP function errors"
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 5
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref GptOssMcpFunction
+      TreatMissingData: notBreaching
+
+  FunctionDurationAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "gpt-oss-mcp-duration-${Environment}"
+      AlarmDescription: "GPT-OSS MCP function duration"
+      MetricName: Duration
+      Namespace: AWS/Lambda
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 25000  # 25 seconds
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref GptOssMcpFunction
+      TreatMissingData: notBreaching
+
+Outputs:
+  GptOssMcpApi:
+    Description: "API Gateway endpoint URL for GPT-OSS MCP Server"
+    Value: !Sub "https://${GptOssMcpApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/"
+    Export:
+      Name: !Sub "${AWS::StackName}-ApiUrl"
+
+  GptOssMcpFunction:
+    Description: "GPT-OSS MCP Lambda Function ARN"
+    Value: !GetAtt GptOssMcpFunction.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-FunctionArn"
+
+  Architecture:
+    Description: "Lambda function architecture"
+    Value: "arm64"
+    Export:
+      Name: !Sub "${AWS::StackName}-Architecture"
+
+  McpEndpoint:
+    Description: "MCP endpoint for client configuration"
+    Value: !Sub "https://${GptOssMcpApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/mcp"
+    Export:
+      Name: !Sub "${AWS::StackName}-McpEndpoint"

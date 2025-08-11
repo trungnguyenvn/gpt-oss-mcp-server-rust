@@ -1,0 +1,17 @@
+# Cargo configuration for AWS Lambda ARM64 native compilation
+
+[build]
+# Native compilation - no target specification needed
+
+# Rustflags for Graviton2 optimization
+[target.aarch64-unknown-linux-gnu]
+rustflags = [
+    "-C", "target-cpu=neoverse-n1",
+    "-C", "link-arg=-s",  # Strip symbols for smaller binary
+]
+
+[target.x86_64-unknown-linux-gnu]
+rustflags = [
+    "-C", "target-cpu=generic",
+    "-C", "link-arg=-s",  # Strip symbols for smaller binary
+]

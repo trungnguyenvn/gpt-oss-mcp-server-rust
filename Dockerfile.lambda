@@ -1,0 +1,26 @@
+FROM public.ecr.aws/lambda/provided:al2023-arm64
+
+# Install Rust and build dependencies (curl is already available)
+RUN dnf update -y && \
+    dnf install -y gcc && \
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
+
+# Set environment variables
+ENV PATH="/root/.cargo/bin:${PATH}"
+ENV RUSTFLAGS="-C target-cpu=neoverse-n1"
+
+# Create working directory
+WORKDIR /build
+
+# Copy source code
+COPY Cargo.toml ./
+COPY src/ ./src/
+
+# Build the application natively on ARM64
+RUN source ~/.cargo/env && cargo build --release
+
+# Copy the binary to the Lambda runtime directory
+RUN cp target/release/bootstrap ${LAMBDA_RUNTIME_DIR}/
+
+# Set the CMD to your handler
+CMD ["bootstrap"]

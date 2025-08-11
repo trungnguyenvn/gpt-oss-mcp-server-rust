@@ -1,0 +1,56 @@
+[package]
+name = "gpt-oss-mcp-server"
+version = "1.0.0"
+edition = "2021"
+
+[[bin]]
+name = "bootstrap"
+path = "src/main.rs"
+
+[dependencies]
+# Lambda runtime
+lambda_runtime = "0.8"
+lambda_http = "0.8"
+
+# HTTP handling
+axum = "0.7"
+tower = "0.4"
+tower-http = { version = "0.5", features = ["cors"] }
+
+# Async runtime
+tokio = { version = "1.0", features = ["macros"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# HTTP client with rustls instead of native-tls for better cross-compilation
+reqwest = { version = "0.11", features = ["json", "rustls-tls"], default-features = false }
+
+# HTML parsing and text extraction
+html2text = "0.12"
+scraper = "0.20"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Utilities
+lazy_static = "1.4"
+chrono = { version = "0.4", features = ["serde"] }
+urlencoding = "2.1"
+uuid = { version = "1.0", features = ["v4"] }
+regex = "1.10"
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+[profile.release]
+# Optimize for size and performance on ARM64
+opt-level = "z"  # Optimize for size
+lto = true       # Link Time Optimization
+codegen-units = 1
+panic = "abort"  # Reduce binary size
+strip = true     # Strip symbols
+
